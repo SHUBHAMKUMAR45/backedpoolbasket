@@ -75,7 +75,7 @@ export const sendOtp = asyncHandler(async (req, res) => {
 });
 
 export const verifyOtp = asyncHandler(async (req, res) => {
-  const result = await authService.verifyOtp(req.body.email, req.body.otp);
+  const result = await authService.verifyOtp(req.body.email, req.body.otp, req.body.purpose);
   res
     .status(200)
     .json(new ApiResponse(200, result, 'OTP verified successfully'));

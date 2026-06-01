@@ -16,12 +16,21 @@ export const register = async ({ name, email, password }) => {
     throw new ApiError(409, 'Email is already registered');
   }
 
+  // Ensure Email OTP verification has been successfully completed
+  const verifiedOtp = await OTP.findOne({ email, verified: true }).sort({ updatedAt: -1 });
+  if (!verifiedOtp) {
+    throw new ApiError(400, 'Email OTP verification is mandatory before registration.');
+  }
+
   const user = await User.create({
     name,
     email,
     password,
     role: 'user'
   });
+
+  // Consume verified OTPs to prevent reuse
+  await OTP.deleteMany({ email });
 
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
@@ -73,8 +82,8 @@ export const adminLogin = async ({ email, password }) => {
     throw new ApiError(403, 'Your account has been deactivated. Please contact support.');
   }
 
-  if (user.role !== 'admin' && user.role !== 'seller') {
-    throw new ApiError(403, 'Access denied. Admin or Seller credentials required.');
+  if (user.role !== 'admin') {
+    throw new ApiError(403, 'Access denied. Admin credentials required.');
   }
 
   user.lastLogin = new Date();
@@ -184,7 +193,7 @@ export const sendOtp = async (email) => {
   return { message: `OTP sent to ${email}`, email };
 };
 
-export const verifyOtp = async (email, otp) => {
+export const verifyOtp = async (email, otp, purpose) => {
   const latestOtp = await OTP.findOne({ email, verified: false }).sort({ createdAt: -1 });
 
   if (!latestOtp) {
@@ -210,6 +219,10 @@ export const verifyOtp = async (email, otp) => {
 
   latestOtp.verified = true;
   await latestOtp.save();
+
+  if (purpose === 'register') {
+    return { verified: true, email };
+  }
 
   // Find or create User with role delivery_partner
   let user = await User.findOne({ email });

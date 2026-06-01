@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 
 export const getProducts = async (query) => {
   const page = parseInt(query.page || PAGINATION.DEFAULT_PAGE, 10);
-  const limit = parseInt(query.limit || PAGINATION.DEFAULT_LIMIT, 10);
+  const limit = Math.min(parseInt(query.limit || PAGINATION.DEFAULT_LIMIT, 10), PAGINATION.MAX_LIMIT);
   const { category, search, sort, minPrice, maxPrice, isExpress, isSameDay, isFeatured } = query;
 
   // Build sorted queries for deterministic cache key creation
@@ -35,7 +35,7 @@ export const getProducts = async (query) => {
     if (mongoose.Types.ObjectId.isValid(category)) {
       filter.category = category;
     } else {
-      const foundCategory = await Category.findOne({ slug: category, isActive: true });
+      const foundCategory = await Category.findOne({ slug: category, isActive: true }).lean();
       if (foundCategory) {
         filter.category = foundCategory._id;
       } else {
@@ -84,14 +84,15 @@ export const getProducts = async (query) => {
     }
   }
 
-  // Paginated search queries
+  // Paginated search queries with lean() optimization
   const skip = (page - 1) * limit;
   const total = await Product.countDocuments(filter);
   const products = await Product.find(filter)
     .sort(sortCriteria)
     .skip(skip)
     .limit(limit)
-    .populate('category', 'name slug');
+    .populate('category', 'name slug')
+    .lean();
 
   const pages = Math.ceil(total / limit);
 
@@ -138,7 +139,7 @@ export const getProduct = async (idOrSlug) => {
 
 export const createProduct = async (productData, imageBuffers, userId) => {
   // Validate category
-  const categoryExists = await Category.findOne({ _id: productData.category, isActive: true });
+  const categoryExists = await Category.findOne({ _id: productData.category, isActive: true }).lean();
   if (!categoryExists) {
     throw new ApiError(404, 'Category not found or deactivated');
   }
@@ -178,7 +179,7 @@ export const updateProduct = async (id, updates, imageBuffers) => {
 
   // Category validity check if provided
   if (updates.category) {
-    const categoryExists = await Category.findOne({ _id: updates.category, isActive: true });
+    const categoryExists = await Category.findOne({ _id: updates.category, isActive: true }).lean();
     if (!categoryExists) {
       throw new ApiError(404, 'Category not found or deactivated');
     }

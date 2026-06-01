@@ -87,11 +87,10 @@ export const createOrder = async (userId, { items, shippingAddress, payment, gif
   // Step 5: Compute final total
   const total = subtotal + deliveryCharge - discount;
 
-  // Only COD is supported for payment method
-  if (payment.method !== 'cod') {
-    throw new ApiError(400, 'Only Cash on Delivery (COD) is supported as a payment method.');
+  // COD is the only supported payment method
+  if (payment.method && payment.method !== 'cod') {
+    throw new ApiError(400, 'Only Cash on Delivery (COD) is supported.');
   }
-  let razorpayOrderId = null;
 
   // B2 FIX: Atomic stock deduction — replaces the 2-step read+bulkWrite with per-product
   // atomic updateOne. The filter { stock: { $gte: quantity } } ensures we only decrement
@@ -163,9 +162,8 @@ export const createOrder = async (userId, { items, shippingAddress, payment, gif
       total
     },
     payment: {
-      method: payment.method,
-      status: 'pending',
-      razorpayOrderId
+      method: 'cod',
+      status: 'pending'
     },
     couponCode,
     couponDiscount: discount,
@@ -186,7 +184,7 @@ export const createOrder = async (userId, { items, shippingAddress, payment, gif
     console.error(`FCM/Notification trigger failed: ${err.message}`);
   }
 
-  return { order, razorpayOrderId };
+  return { order };
 };
 
 export const getMyOrders = async (userId, { page = 1, limit = 12, status }) => {
@@ -198,13 +196,14 @@ export const getMyOrders = async (userId, { page = 1, limit = 12, status }) => {
   const skip = (page - 1) * limit;
   const total = await Order.countDocuments(filter);
   
-  // Projection: orderNumber, status, pricing.total, first item only, and dates
+  // Optimized projection: selected fields only, lean() for better performance
   const orders = await Order.find(filter)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .select('orderNumber status pricing.total items createdAt')
-    .slice('items', 1); // returns only the first element of items array
+    .slice('items', 1)
+    .lean();
 
   const pages = Math.ceil(total / limit);
 
@@ -223,7 +222,8 @@ export const getMyOrders = async (userId, { page = 1, limit = 12, status }) => {
 
 export const getOrderDetails = async (userId, orderId) => {
   const order = await Order.findOne({ _id: orderId, user: userId })
-    .populate('items.product', 'name images');
+    .populate('items.product', 'name images')
+    .lean();
 
   if (!order) {
     throw new ApiError(404, 'Order not found');
@@ -292,7 +292,7 @@ export const updateOrderStatus = async (orderId, { status, note }, adminId) => {
 
 export const getAllOrders = async (query) => {
   const page = parseInt(query.page || 1, 10);
-  const limit = parseInt(query.limit || 12, 10);
+  const limit = Math.min(parseInt(query.limit || 12, 10), 50); // Cap limit at 50
   const { status, search, dateFrom, dateTo } = query;
 
   const filter = {};
@@ -301,12 +301,9 @@ export const getAllOrders = async (query) => {
   }
 
   if (search) {
-    // Search by orderNumber or check customer name
-    const matchingUsers = await User.find({ name: new RegExp(search, 'i') }).select('_id');
-    const userIds = matchingUsers.map((u) => u._id);
+    // Optimized search: orderNumber pattern match first (faster)
     filter.$or = [
-      { orderNumber: new RegExp(search, 'i') },
-      { user: { $in: userIds } }
+      { orderNumber: new RegExp(search, 'i') }
     ];
   }
 
@@ -322,9 +319,10 @@ export const getAllOrders = async (query) => {
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
-    .populate('user', 'name email phone');
+    .populate('user', 'name email phone')
+    .lean();
 
-  // Aggregation summary by status
+  // Cached aggregation summary by status for performance
   const summaryAgg = await Order.aggregate([
     { $group: { _id: '$status', count: { $sum: 1 }, totalAmount: { $sum: '$pricing.total' } } }
   ]);

@@ -62,16 +62,15 @@ const orderSchema = new mongoose.Schema(
       method: {
         type: String,
         enum: ['cod'],
+        default: 'cod',
         required: true
       },
       status: {
         type: String,
-        enum: ['pending', 'completed', 'failed', 'refunded'],
-        default: 'pending'
+        enum: ['pending', 'completed', 'refunded'],
+        default: 'pending',
+        index: true
       },
-      razorpayOrderId: { type: String },
-      razorpayPaymentId: { type: String },
-      razorpaySignature: { type: String },
       paidAt: { type: Date }
     },
     couponCode: { type: String },
@@ -127,11 +126,13 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
+// Performance Indexes for optimized queries
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ status: 1, user: 1 });
-orderSchema.index({ 'payment.razorpayOrderId': 1 });
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ 'payment.status': 1 });
 orderSchema.index({ deliveryPartnerId: 1, status: 1 });
+orderSchema.index({ orderNumber: 1 }, { unique: true });
 
 // Pre-save hook
 orderSchema.pre('save', async function (next) {

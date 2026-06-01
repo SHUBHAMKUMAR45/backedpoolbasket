@@ -660,3 +660,88 @@ describe('B11: OTP Attempt Off-by-One Fix', () => {
     expect(res.body.message).toMatch(/incorrect/i); // Not "max exceeded"
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Customer Registration Email OTP Verification Flow Tests
+// ─────────────────────────────────────────────────────────
+
+describe('Customer Registration Email OTP Flow', () => {
+  it('should REJECT registration if OTP is not verified for the email', async () => {
+    const email = 'unverified-register@test.com';
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        name: 'John Doe',
+        email,
+        password: 'Password123!'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/OTP verification is mandatory/i);
+  });
+
+  it('should verify OTP successfully with purpose: register without creating user or returning tokens', async () => {
+    const email = 'register-otp-verify@test.com';
+    const otpCode = '1234';
+
+    const { default: OTP } = await import('../models/OTP.js');
+    await OTP.create({
+      email,
+      otp: await bcrypt.hash(otpCode, 10),
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/verify-otp')
+      .send({ email, otp: otpCode, purpose: 'register' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.verified).toBe(true);
+    expect(res.body.data.email).toBe(email);
+    expect(res.body.data.accessToken).toBeUndefined();
+
+    // Verify OTP document in DB is marked verified
+    const freshOtp = await OTP.findOne({ email });
+    expect(freshOtp.verified).toBe(true);
+
+    // Verify no user was created
+    const { default: User } = await import('../models/User.js');
+    const user = await User.findOne({ email });
+    expect(user).toBeNull();
+  });
+
+  it('should complete registration successfully after OTP is verified and clean up OTP database records', async () => {
+    const email = 'successful-register@test.com';
+    const otpCode = '5678';
+
+    const { default: OTP } = await import('../models/OTP.js');
+    await OTP.create({
+      email,
+      otp: await bcrypt.hash(otpCode, 10),
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      verified: true // already verified
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        name: 'Jane Doe',
+        email,
+        password: 'Password123!'
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.user.email).toBe(email);
+    expect(res.body.data.accessToken).toBeDefined();
+
+    // Verify OTP records were deleted
+    const freshOtp = await OTP.findOne({ email });
+    expect(freshOtp).toBeNull();
+
+    // Verify user exists in database
+    const { default: User } = await import('../models/User.js');
+    const user = await User.findOne({ email });
+    expect(user).not.toBeNull();
+    expect(user.role).toBe('user');
+  });
+});

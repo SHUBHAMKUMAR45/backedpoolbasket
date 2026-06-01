@@ -19,8 +19,6 @@ const environment = {
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   REDIS_HOST: process.env.REDIS_HOST || '127.0.0.1',
   REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379', 10),
   REDIS_PASSWORD: process.env.REDIS_PASSWORD || '',
@@ -39,7 +37,7 @@ const environment = {
   SMTP_FROM: process.env.SMTP_FROM || 'Phool Basket <noreply@phoolbasket.com>'
 };
 
-// In production, validate critical variables
+// In production, validate critical variables (COD-only, no payment gateway required)
 if (environment.NODE_ENV === 'production') {
   const required = [
     'MONGODB_URI',
@@ -47,9 +45,7 @@ if (environment.NODE_ENV === 'production') {
     'JWT_REFRESH_SECRET',
     'CLOUDINARY_CLOUD_NAME',
     'CLOUDINARY_API_KEY',
-    'CLOUDINARY_API_SECRET',
-    'RAZORPAY_KEY_ID',
-    'RAZORPAY_KEY_SECRET'
+    'CLOUDINARY_API_SECRET'
   ];
 
   required.forEach((key) => {

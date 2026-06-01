@@ -1,16 +1,16 @@
 import express from 'express';
-import * as adminController from '../controllers/admin.controller.js';
+import * as orderController from '../controllers/order.controller.js';
 import { authenticate, authorize } from '../middlewares/authenticate.js';
 import { ROLES } from '../utils/constants.js';
 
 const router = express.Router();
 
-// Apply Admin Authorization checks to all dashboard routes
+// All admin routes require authentication and authorization
 router.use(authenticate, authorize(ROLES.ADMIN));
 
-router.get('/overview', adminController.getOverview);
-router.get('/analytics', adminController.getAnalytics);
-router.get('/customers', adminController.getCustomers);
-router.get('/inventory', adminController.getInventory);
+// Admin order management (optimized for COD-only operations)
+router.get('/orders', orderController.getAllOrders);
+router.put('/orders/:id/status', orderController.updateOrderStatus);
+router.post('/orders/:id/assign-delivery', orderController.assignDeliveryPartner);
 
 export default router;

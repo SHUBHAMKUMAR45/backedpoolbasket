@@ -16,11 +16,11 @@ router.get(
 );
 router.get('/:id', productController.getProduct);
 
-// Protected routes (Admin & Seller only)
+// Protected routes (Admin only)
 router.post(
   '/',
   authenticate,
-  authorize(ROLES.ADMIN, ROLES.SELLER),
+  authorize(ROLES.ADMIN),
   uploadMultiple('images', 5),
   validate(productValidator.create),
   productController.createProduct
@@ -29,7 +29,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  authorize(ROLES.ADMIN, ROLES.SELLER),
+  authorize(ROLES.ADMIN),
   uploadMultiple('images', 5),
   validate(productValidator.update),
   productController.updateProduct
@@ -38,14 +38,14 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize(ROLES.ADMIN, ROLES.SELLER),
+  authorize(ROLES.ADMIN),
   productController.deleteProduct
 );
 
 router.patch(
   '/:id/stock',
   authenticate,
-  authorize(ROLES.ADMIN, ROLES.SELLER),
+  authorize(ROLES.ADMIN),
   productController.updateStock
 );
 

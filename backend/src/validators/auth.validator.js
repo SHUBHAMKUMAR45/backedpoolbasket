@@ -55,7 +55,8 @@ const verifyOtp = Joi.object({
     'string.length': 'OTP must be exactly 4 digits',
     'string.pattern.base': 'OTP must contain only digits',
     'any.required': 'OTP is required'
-  })
+  }),
+  purpose: Joi.string().valid('register', 'login').optional()
 });
 
 const deliveryRegister = Joi.object({

@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
 
+/**
+ * Transaction Model - COD Only
+ * Tracks COD payment completions and refunds
+ * Simplified schema for cash-on-delivery transactions
+ */
 const transactionSchema = new mongoose.Schema(
   {
     order: {
@@ -11,18 +16,8 @@ const transactionSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'User reference is required']
-    },
-    razorpayOrderId: {
-      type: String,
+      required: [true, 'User reference is required'],
       index: true
-    },
-    razorpayPaymentId: {
-      type: String,
-      index: true
-    },
-    razorpaySignature: {
-      type: String
     },
     amount: {
       type: Number,
@@ -34,12 +29,22 @@ const transactionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'captured', 'failed', 'refunded'],
-      default: 'pending'
+      enum: ['pending', 'completed', 'refunded'],
+      default: 'pending',
+      index: true
+    },
+    type: {
+      type: String,
+      enum: ['payment', 'refund'],
+      default: 'payment'
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    indexes: [
+      { createdAt: -1 },
+      { order: 1, status: 1 }
+    ]
   }
 );
 
