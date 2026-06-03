@@ -308,7 +308,7 @@ export const getInventory = async () => {
 };
 
 import DeliveryPartner from '../models/DeliveryPartner.js';
-import { ApiError } from '../utils/ApiError.js';
+import ApiError from '../utils/ApiError.js';
 
 export const getDeliveryPartners = async () => {
   const partners = await DeliveryPartner.find()

@@ -336,7 +336,7 @@ export const registerDeliveryNew = async (data) => {
     email: data.email,
     phone: data.phone,
     password: data.password,
-    role: ROLES.DELIVERY_PARTNER,
+    role: 'delivery_partner',
     isVerified: true // Auto-verify for simplicity in this flow
   });
 
@@ -348,7 +348,7 @@ export const registerDeliveryNew = async (data) => {
     isVerified: true
   });
 
-  const token = generateToken(user._id);
+  const token = user.generateAccessToken();
 
   return {
     user: {

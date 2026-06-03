@@ -82,6 +82,21 @@ app.use('/api/v1/delivery', deliveryRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/support', supportRouter);
 
+// Fallbacks for older app version routes (without v1)
+app.use('/api/auth', authRouter);
+app.use('/api/products', productRouter);
+app.use('/api/categories', categoryRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/addresses', addressRouter);
+app.use('/api/reviews', reviewRouter);
+app.use('/api/notifications', notificationRouter);
+app.use('/api/banners', bannerRouter);
+app.use('/api/coupons', couponRouter);
+app.use('/api/delivery', deliveryRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/support', supportRouter);
+
 // 8. 404 Handler for undefined routes
 app.use(notFound);
 

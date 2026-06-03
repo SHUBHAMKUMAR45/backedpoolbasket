@@ -1,6 +1,6 @@
 import * as adminService from '../services/admin.service.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
 export const getDeliveryPartners = asyncHandler(async (req, res) => {
   const partners = await adminService.getDeliveryPartners();
